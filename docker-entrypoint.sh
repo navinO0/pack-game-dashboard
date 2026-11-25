@@ -29,7 +29,11 @@ try {
 # 2. Ensure DATABASE_URL always targets the dedicated schema (default: pack_score_calc)
 #    and run Prisma migrations automatically on every startup (already-applied migrations are skipped).
 SCHEMA_NAME="${DB_SCHEMA_NAME:-pack_score_calc}"
-PRISMA_CLI="./node_modules/prisma/build/index.js"
+if [ -f "/prisma-cli/node_modules/prisma/build/index.js" ]; then
+  PRISMA_CLI="/prisma-cli/node_modules/prisma/build/index.js"
+else
+  PRISMA_CLI="./node_modules/prisma/build/index.js"
+fi
 
 if [ -n "${DATABASE_URL:-}" ]; then
   case "${DATABASE_URL}" in

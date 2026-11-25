@@ -32,6 +32,12 @@ ENV NEXT_PUBLIC_CURRENCY_CODE=${NEXT_PUBLIC_CURRENCY_CODE}
 RUN npx prisma generate --schema=${PRISMA_SCHEMA}
 RUN npx next build
 
+# 3b. Isolated Prisma CLI stage (guarantees all transitive deps such as 'effect' are present)
+FROM base AS prisma-cli
+WORKDIR /prisma-cli
+RUN --mount=type=cache,target=/root/.npm \
+    npm init -y && npm install --no-audit --no-fund prisma@6.19.3
+
 # 4. Production runner stage
 FROM base AS runner
 WORKDIR /app
@@ -55,12 +61,12 @@ COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Copy Prisma schema, migrations, CLI, and generated client for startup migrations
+# Copy Prisma schema, migrations, generated client, and isolated Prisma CLI for startup migrations
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 COPY --from=builder --chown=nextjs:nodejs /app/scripts ./scripts
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/prisma ./node_modules/prisma
+COPY --from=prisma-cli --chown=nextjs:nodejs /prisma-cli/node_modules /prisma-cli/node_modules
 
 # Copy runtime entrypoint script (injects runtime env & runs schema-scoped migrations)
 COPY --chown=nextjs:nodejs docker-entrypoint.sh ./docker-entrypoint.sh
