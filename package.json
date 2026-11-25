@@ -4,8 +4,10 @@
   "private": true,
   "description": "Pack Game – Production Score Management, Elimination Tracking & Prize Distribution Application",
   "scripts": {
+    "predev": "node scripts/prepare-db.mjs",
     "dev": "next dev --turbopack",
-    "build": "prisma generate && next build",
+    "build": "SKIP_DB_MIGRATE=true node scripts/prepare-db.mjs && next build",
+    "prestart": "node scripts/prepare-db.mjs",
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
