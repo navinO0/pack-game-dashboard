@@ -1,0 +1,160 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  schemas  = ["pack_score_calc"]
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         String   @default("HOST") // ADMIN | HOST
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  players   Player[]
+  games     Game[]
+  auditLogs AuditLog[]
+
+  @@index([email])
+  @@schema("pack_score_calc")
+}
+
+model Player {
+  id             String   @id @default(cuid())
+  name           String
+  normalizedName String
+  nickname       String?
+  phone          String?
+  notes          String?
+  isActive       Boolean  @default(true)
+  createdById    String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  createdBy   User         @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  gamePlayers GamePlayer[]
+
+  @@unique([createdById, normalizedName])
+  @@index([createdById, name])
+  @@index([createdById, isActive])
+  @@schema("pack_score_calc")
+}
+
+model Game {
+  id                 String    @id @default(cuid())
+  title              String
+  status             String    @default("ACTIVE") // ACTIVE | COMPLETED | CANCELLED
+  targetScore        Int
+  betDescription     String?
+  betAmountPerPlayer Float?
+  totalPrizePool     Float     @default(0)
+  isBetFulfilled     Boolean   @default(false)
+  betFulfilledAt     DateTime?
+  currency           String    @default("INR")
+  distributionMode   String    @default("ELIMINATION_CONTRIBUTION") // ELIMINATION_CONTRIBUTION | PRIZE_SPLIT
+  prizeDistribution  String    // JSON-serialized DistributionSlot[]
+  currentRound       Int       @default(0)
+  version            Int       @default(1)
+  notes              String?
+  createdById        String
+  startedAt          DateTime  @default(now())
+  completedAt        DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  createdBy User         @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  players   GamePlayer[]
+  rounds    Round[]
+
+  @@index([createdById, status])
+  @@index([createdById, createdAt])
+  @@schema("pack_score_calc")
+}
+
+model GamePlayer {
+  id                String   @id @default(cuid())
+  gameId            String
+  playerId          String
+  seatOrder         Int
+  totalScore        Int      @default(0)
+  isEliminated      Boolean  @default(false)
+  eliminationOrder  Int?
+  eliminatedInRound Int?
+  isWinner          Boolean  @default(false)
+  prizePercentage   Float    @default(0)
+  payoutAmount      Float    @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  game        Game         @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  player      Player       @relation(fields: [playerId], references: [id], onDelete: Restrict)
+  roundScores RoundScore[]
+
+  @@unique([gameId, playerId])
+  @@index([gameId, seatOrder])
+  @@index([gameId, eliminationOrder])
+  @@index([playerId])
+  @@schema("pack_score_calc")
+}
+
+model Round {
+  id                    String   @id @default(cuid())
+  gameId                String
+  roundNumber           Int
+  evaluatedGamePlayerId String?
+  outcome               String   @default("ANNOUNCER_WON") // ANNOUNCER_WON | ANNOUNCER_LOST
+  totalAnnounced        Int      @default(0)
+  resultSummary         String?
+  idempotencyKey        String?  @unique
+  notes                 String?
+  createdAt             DateTime @default(now())
+
+  game   Game         @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  scores RoundScore[]
+
+  @@unique([gameId, roundNumber])
+  @@index([gameId, roundNumber])
+  @@schema("pack_score_calc")
+}
+
+model RoundScore {
+  id                   String   @id @default(cuid())
+  roundId              String
+  gamePlayerId         String
+  announcedScore       Int      @default(0)
+  isEvaluated          Boolean  @default(false)
+  isRoundWinner        Boolean  @default(false)
+  points               Int
+  cumulativeScore      Int
+  triggeredElimination Boolean  @default(false)
+  createdAt            DateTime @default(now())
+
+  round      Round      @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  gamePlayer GamePlayer @relation(fields: [gamePlayerId], references: [id], onDelete: Cascade)
+
+  @@unique([roundId, gamePlayerId])
+  @@index([gamePlayerId])
+  @@schema("pack_score_calc")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  action     String
+  entityType String
+  entityId   String?
+  metadata   String?
+  createdAt  DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([entityType, entityId])
+  @@schema("pack_score_calc")
+}
