@@ -701,9 +701,9 @@ export default function ActiveGamePage() {
 
         {/* Top Live Scoreboard — Large Player Names & Color-Coded Scores (Drag to Set Positions) */}
         <div className="space-y-1.5">
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <div className="flex flex-wrap items-center justify-between gap-1 text-xs text-muted-foreground">
             <span className="font-medium">Live Scoreboard</span>
-            <span>Drag cards or use arrows to set player positions</span>
+            <span className="text-[11px] sm:text-xs">Drag or use arrows to reorder</span>
           </div>
           <div className="grid gap-2.5 sm:gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
             {game.players.map((player, idx) => {
@@ -1265,7 +1265,7 @@ export default function ActiveGamePage() {
 
       {/* Round Score Entry Modal (Opened on 0-5 Announce Click) */}
       <Dialog open={scoreModalOpen} onOpenChange={setScoreModalOpen}>
-        <DialogContent className="w-[calc(100vw-1.5rem)] max-w-lg rounded-xl p-4 sm:p-6 max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-lg">
           <form onSubmit={handleRoundSubmit}>
             <DialogHeader>
               <DialogTitle>
@@ -1297,7 +1297,7 @@ export default function ActiveGamePage() {
                     Current: {announcerPlayer?.totalScore ?? 0} pts
                   </span>
                 </div>
-                <div className="flex items-center justify-between gap-2 pt-1">
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
                   <span className="text-xs text-muted-foreground">Announced Score (0–5):</span>
                   <div className="flex items-center gap-1">
                     {ANNOUNCE_OPTIONS.map((v) => (
@@ -1306,7 +1306,7 @@ export default function ActiveGamePage() {
                         type="button"
                         size="sm"
                         variant={announcerScore === v ? "default" : "outline"}
-                        className="h-7 w-7 p-0 font-mono text-xs"
+                        className="h-8 w-8 sm:h-7 sm:w-7 p-0 font-mono text-xs"
                         onClick={() => setAnnouncerScore(v)}
                       >
                         {v}
@@ -1372,6 +1372,7 @@ export default function ActiveGamePage() {
                             const nextInput = scoreInputRefs.current[idx + 1];
                             nextInput?.focus();
                             nextInput?.select();
+                            nextInput?.scrollIntoView({ behavior: "smooth", block: "center" });
                           }
                         }}
                         required
@@ -1504,7 +1505,7 @@ export default function ActiveGamePage() {
           if (!open) setEditingRound(null);
         }}
       >
-        <DialogContent className="w-[calc(100vw-1.5rem)] max-w-lg rounded-xl p-4 sm:p-6 max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-lg">
           {editingRound && (
             <form onSubmit={handleSaveEditedRound}>
               <DialogHeader>
@@ -1587,6 +1588,7 @@ export default function ActiveGamePage() {
                               const nextInput = editScoreInputRefs.current[idx + 1];
                               nextInput?.focus();
                               nextInput?.select();
+                              nextInput?.scrollIntoView({ behavior: "smooth", block: "center" });
                             }
                           }}
                           required

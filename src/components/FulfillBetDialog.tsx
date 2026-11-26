@@ -118,7 +118,7 @@ export function FulfillBetDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[calc(100vw-1.5rem)] max-w-md rounded-xl p-4 sm:p-6 max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-md">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>Fulfill Bet &amp; Finalize Price</DialogTitle>

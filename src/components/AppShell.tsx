@@ -1,4 +1,4 @@
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        "use client";
+                               "use client";
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
@@ -175,7 +175,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <div className="min-h-screen bg-background overflow-x-clip">
+    <div className="min-h-[100dvh] bg-background overflow-x-clip">
       {/* Desktop Fixed Sidebar */}
       <aside className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-40 lg:flex lg:w-64 lg:flex-col border-r bg-card no-print">
         <div className="h-full overflow-y-auto">{SidebarBody}</div>
@@ -195,7 +195,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       )}
 
       {/* Main Content Column */}
-      <div className="flex min-h-screen flex-1 flex-col min-w-0 lg:pl-64">
+      <div className="flex min-h-[100dvh] flex-1 flex-col min-w-0 lg:pl-64">
         {/* Top Bar */}
         <header className="sticky top-0 z-30 flex h-14 sm:h-16 items-center justify-between gap-3 border-b bg-card/95 backdrop-blur px-3 sm:px-6 lg:px-8 no-print">
           <div className="flex items-center gap-2.5 min-w-0">
@@ -217,8 +217,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Button asChild size="sm" className="h-9 px-3">
               <Link href="/games/new">
                 <PlusCircle className="mr-1.5 h-4 w-4" />
-                <span className="hidden xs:inline">New Game</span>
-                <span className="xs:hidden sm:inline">Start Game</span>
+                <span>New Game</span>
               </Link>
             </Button>
           </div>
@@ -234,10 +233,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           PackScore Pro &bull; Pack Game Score &amp; Prize Distribution Platform
         </footer>
 
-        {/* Mobile Bottom Tab Bar */}
+        {/* Mobile Bottom Tab Bar (auto-hidden when mobile keyboard is open) */}
         <nav
           aria-label="Mobile Navigation"
-          className="fixed bottom-0 inset-x-0 z-40 border-t bg-card/95 backdrop-blur lg:hidden no-print"
+          className="mobile-bottom-nav fixed bottom-0 inset-x-0 z-40 border-t bg-card/95 backdrop-blur pb-[env(safe-area-inset-bottom)] lg:hidden no-print"
         >
           <div className="grid grid-cols-4 h-16 max-w-lg mx-auto">
             {NAV_ITEMS.map((item) => {

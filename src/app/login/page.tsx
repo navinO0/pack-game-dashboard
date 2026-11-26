@@ -52,7 +52,7 @@ function LoginForm() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-muted/40 p-4">
+    <div className="min-h-[100dvh] flex items-start sm:items-center justify-center bg-muted/40 p-4 pt-8 sm:p-4">
       <Card className="w-full max-w-md shadow-sm">
         <CardHeader className="space-y-3 text-center">
           <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">

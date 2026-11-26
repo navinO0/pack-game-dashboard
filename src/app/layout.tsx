@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { MobileViewportSync } from "@/components/MobileViewportSync";
 
 export const metadata: Metadata = {
   title: "PackScore Pro — Pack Game Score & Prize Management",
@@ -12,6 +13,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   viewportFit: "cover",
+  interactiveWidget: "resizes-content",
 };
 
 export default function RootLayout({
@@ -26,7 +28,8 @@ export default function RootLayout({
         {/* eslint-disable-next-line @next/next/no-sync-scripts */}
         <script src="/env.js" />
       </head>
-      <body className="min-h-screen bg-background font-sans text-foreground antialiased overflow-x-clip">
+      <body className="min-h-[100dvh] bg-background font-sans text-foreground antialiased overflow-x-clip">
+        <MobileViewportSync />
         {children}
       </body>
     </html>

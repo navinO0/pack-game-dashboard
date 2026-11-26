@@ -122,7 +122,7 @@ export function EditGameDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[calc(100vw-1.5rem)] max-w-md rounded-xl p-4 sm:p-6 max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-md">
         <form onSubmit={handleSave}>
           <DialogHeader>
             <DialogTitle>Edit Game Settings</DialogTitle>
@@ -156,6 +156,7 @@ export function EditGameDialog({
                 <Input
                   id="edit-target-score"
                   type="number"
+                  inputMode="numeric"
                   min={10}
                   value={targetScore}
                   onChange={(e) => setTargetScore(e.target.value)}
@@ -204,6 +205,7 @@ export function EditGameDialog({
                 <Input
                   id="edit-prize-pool"
                   type="number"
+                  inputMode="decimal"
                   min={0}
                   step="0.01"
                   placeholder="Final bill / price"

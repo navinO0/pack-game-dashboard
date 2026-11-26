@@ -301,6 +301,7 @@ function CreateGameForm() {
                 <Input
                   id="targetScore"
                   type="number"
+                  inputMode="numeric"
                   min={10}
                   value={targetScore}
                   onChange={(e) => setTargetScore(e.target.value)}
@@ -584,6 +585,7 @@ function CreateGameForm() {
                         <div className="relative">
                           <Input
                             type="number"
+                            inputMode="decimal"
                             min={0}
                             max={100}
                             step="0.5"

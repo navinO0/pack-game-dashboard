@@ -313,7 +313,7 @@ export default function PlayersPage() {
 
       {/* Add / Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="w-[calc(100vw-1.5rem)] max-w-md rounded-xl p-4 sm:p-6 max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-md">
           <form onSubmit={handleSave}>
             <DialogHeader>
               <DialogTitle>
@@ -357,6 +357,8 @@ export default function PlayersPage() {
                 <Label htmlFor="playerPhone">Phone (Optional)</Label>
                 <Input
                   id="playerPhone"
+                  type="tel"
+                  inputMode="tel"
                   placeholder="e.g. +91 98765 43210"
                   value={formPhone}
                   onChange={(e) => setFormPhone(e.target.value)}

@@ -34,6 +34,19 @@
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
+
+  /* Keep focused inputs comfortably clear of sticky headers and mobile virtual keyboards */
+  input,
+  textarea,
+  select {
+    scroll-margin-top: 5.5rem;
+    scroll-margin-bottom: 8rem;
+  }
+}
+
+/* Hide fixed mobile bottom nav while typing so it never covers focused inputs or keyboard area */
+html[data-keyboard-open="true"] .mobile-bottom-nav {
+  display: none !important;
 }
 
 @media print {
