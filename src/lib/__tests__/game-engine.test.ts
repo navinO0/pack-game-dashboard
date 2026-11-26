@@ -135,6 +135,53 @@ test("Announce 0 special rule: Announcer with 0 ALWAYS wins even if another play
   assert.equal(recById.get("gpD")?.points, 8);
 });
 
+test("Position tie-break: When announcer announces 1 and two others also have 1, first player after announcer in seatOrder wins (with wrap-around)", () => {
+  // Seat order: A(1), B(2), C(3), D(4)
+  // Case 1: B(2) announces 1; A(1)=1, C(3)=1, D(4)=10 -> C(3) comes first after B(2) -> C wins (0), A keeps 1, D keeps 10, B gets penalty 13
+  const players1 = makePlayers();
+  const res1 = evaluateRound(
+    players1,
+    [
+      { gamePlayerId: "gpA", announcedScore: 1 },
+      { gamePlayerId: "gpB", announcedScore: 1 },
+      { gamePlayerId: "gpC", announcedScore: 1 },
+      { gamePlayerId: "gpD", announcedScore: 10 },
+    ],
+    "gpB",
+    100,
+    1
+  );
+  assert.equal(res1.outcome, "ANNOUNCER_LOST");
+  assert.deepEqual(res1.winnerGamePlayerIds, ["gpC"]);
+  const r1Map = new Map(res1.roundScoreRecords.map((r) => [r.gamePlayerId, r]));
+  assert.equal(r1Map.get("gpC")?.points, 0);
+  assert.equal(r1Map.get("gpA")?.points, 1);
+  assert.equal(r1Map.get("gpD")?.points, 10);
+  assert.equal(r1Map.get("gpB")?.points, 13);
+
+  // Case 2 (Wrap-around): C(3) announces 1; A(1)=1, B(2)=1, D(4)=8 -> order after C is D(4) -> A(1) -> B(2), so A(1) wins!
+  const players2 = makePlayers();
+  const res2 = evaluateRound(
+    players2,
+    [
+      { gamePlayerId: "gpA", announcedScore: 1 },
+      { gamePlayerId: "gpB", announcedScore: 1 },
+      { gamePlayerId: "gpC", announcedScore: 1 },
+      { gamePlayerId: "gpD", announcedScore: 8 },
+    ],
+    "gpC",
+    100,
+    1
+  );
+  assert.equal(res2.outcome, "ANNOUNCER_LOST");
+  assert.deepEqual(res2.winnerGamePlayerIds, ["gpA"]);
+  const r2Map = new Map(res2.roundScoreRecords.map((r) => [r.gamePlayerId, r]));
+  assert.equal(r2Map.get("gpA")?.points, 0);
+  assert.equal(r2Map.get("gpB")?.points, 1);
+  assert.equal(r2Map.get("gpD")?.points, 8);
+  assert.equal(r2Map.get("gpC")?.points, 11);
+});
+
 test("Rejects announcer score > 5 while allowing other players to have scores > 5", () => {
   const players = makePlayers();
   assert.throws(() =>

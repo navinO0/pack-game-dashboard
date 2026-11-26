@@ -247,19 +247,27 @@ export function evaluateRound(
 
   const outcome: RoundOutcome = challengers.length === 0 ? "ANNOUNCER_WON" : "ANNOUNCER_LOST";
 
-  // In Scenario B, the player(s) with the LOWEST score among challengers are the round winner(s)
+  // In Scenario B, among challengers with the LOWEST score, the player who comes
+  // FIRST after the announcer in circular seatOrder wins the round (single winner).
   let winnerIds: Set<string>;
   if (outcome === "ANNOUNCER_WON") {
     winnerIds = new Set([evaluatedGamePlayerId]);
   } else {
+    const orderedActive = [...activePlayers].sort((a, b) => a.seatOrder - b.seatOrder);
+    const announcerIdx = orderedActive.findIndex(
+      (p) => p.gamePlayerId === evaluatedGamePlayerId
+    );
+    const circularOthers = [
+      ...orderedActive.slice(announcerIdx + 1),
+      ...orderedActive.slice(0, announcerIdx),
+    ];
     const lowestScore = Math.min(
       ...challengers.map((c) => announcedMap.get(c.gamePlayerId)!)
     );
-    winnerIds = new Set(
-      challengers
-        .filter((c) => announcedMap.get(c.gamePlayerId)! === lowestScore)
-        .map((c) => c.gamePlayerId)
-    );
+    const firstLowestWinner = circularOthers.find(
+      (p) => announcedMap.get(p.gamePlayerId)! === lowestScore
+    )!;
+    winnerIds = new Set([firstLowestWinner.gamePlayerId]);
   }
 
   const winnerNames = activePlayers
