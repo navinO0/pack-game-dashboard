@@ -15,6 +15,7 @@ export async function GET() {
       totalPlayers,
       prizePoolAgg,
       recentGames,
+      activeGamesList,
       playersWithGames,
     ] = await Promise.all([
       prisma.game.count({ where: { createdById: userId } }),
@@ -36,6 +37,18 @@ export async function GET() {
         },
         orderBy: { createdAt: "desc" },
         take: 6,
+      }),
+      prisma.game.findMany({
+        where: { createdById: userId, status: "ACTIVE" },
+        include: {
+          players: {
+            include: { player: { select: { id: true, name: true } } },
+            orderBy: { seatOrder: "asc" },
+          },
+          _count: { select: { rounds: true } },
+        },
+        orderBy: { updatedAt: "desc" },
+        take: 4,
       }),
       prisma.player.findMany({
         where: { createdById: userId, isActive: true },
@@ -93,6 +106,31 @@ export async function GET() {
           roundCount: g._count.rounds,
           winnerName: winner?.player.name || null,
           createdAt: g.createdAt,
+        };
+      }),
+      activeGameWatchlist: activeGamesList.map((g) => {
+        // Sort active players by closest to elimination first (highest score first),
+        // then eliminated players by eliminationOrder
+        const sortedPlayers = [...g.players].sort((a, b) => {
+          if (a.isEliminated !== b.isEliminated) return a.isEliminated ? 1 : -1;
+          if (!a.isEliminated) return b.totalScore - a.totalScore;
+          return (a.eliminationOrder ?? 999) - (b.eliminationOrder ?? 999);
+        });
+        return {
+          id: g.id,
+          title: g.title,
+          targetScore: g.targetScore,
+          betDescription: g.betDescription,
+          roundCount: g._count.rounds,
+          players: sortedPlayers.map((gp) => ({
+            id: gp.id,
+            playerId: gp.player.id,
+            name: gp.player.name,
+            totalScore: gp.totalScore,
+            isEliminated: gp.isEliminated,
+            eliminationOrder: gp.eliminationOrder,
+            isWinner: gp.isWinner,
+          })),
         };
       }),
       leaderboard,

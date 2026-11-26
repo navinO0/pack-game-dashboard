@@ -12,9 +12,12 @@ import {
   Play,
   Award,
   AlertCircle,
+  Flame,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { formatCurrency, formatShortDate } from "@/lib/format";
+import { getScoreRiskStyle } from "@/lib/score-colors";
+import { ordinalLabel } from "@/lib/game-engine";
 import {
   Card,
   CardContent,
@@ -26,6 +29,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -58,6 +62,22 @@ interface DashboardData {
     roundCount: number;
     winnerName: string | null;
     createdAt: string;
+  }>;
+  activeGameWatchlist: Array<{
+    id: string;
+    title: string;
+    targetScore: number;
+    betDescription: string | null;
+    roundCount: number;
+    players: Array<{
+      id: string;
+      playerId: string;
+      name: string;
+      totalScore: number;
+      isEliminated: boolean;
+      eliminationOrder: number | null;
+      isWinner: boolean;
+    }>;
   }>;
   leaderboard: Array<{
     id: string;
@@ -221,6 +241,107 @@ export default function DashboardPage() {
                 </CardContent>
               </Card>
             </div>
+
+            {/* Active Games — Elimination Watch (Sorted by closest to elimination first) */}
+            {data.activeGameWatchlist && data.activeGameWatchlist.length > 0 && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-lg font-bold tracking-tight flex items-center gap-2">
+                      <Flame className="h-5 w-5 text-red-500" />
+                      Active Games — Elimination Watch
+                    </h2>
+                    <p className="text-xs text-muted-foreground">
+                      Sorted by players closest to elimination first. Players near target score are highlighted.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid gap-4 lg:grid-cols-2">
+                  {data.activeGameWatchlist.map((ag) => (
+                    <Card key={ag.id}>
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+                        <div className="min-w-0">
+                          <CardTitle className="text-base truncate">{ag.title}</CardTitle>
+                          <CardDescription className="text-xs">
+                            Target: {ag.targetScore} pts &bull; {ag.roundCount} rounds
+                            {ag.betDescription ? ` • Bet: ${ag.betDescription}` : ""}
+                          </CardDescription>
+                        </div>
+                        <Button asChild size="sm" className="shrink-0">
+                          <Link href={`/games/${ag.id}`}>
+                            <Play className="mr-1.5 h-3.5 w-3.5" />
+                            Resume
+                          </Link>
+                        </Button>
+                      </CardHeader>
+                      <CardContent className="space-y-2.5">
+                        {ag.players.map((p) => {
+                          const risk = getScoreRiskStyle(
+                            p.totalScore,
+                            ag.targetScore,
+                            p.isEliminated,
+                            p.isWinner
+                          );
+                          return (
+                            <div
+                              key={p.id}
+                              className={`rounded-lg border p-3 space-y-1.5 transition-all ${risk.cardHighlightClass}`}
+                            >
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <Link
+                                    href={`/players/${p.playerId}`}
+                                    className="text-sm font-semibold truncate hover:underline"
+                                  >
+                                    {p.name}
+                                  </Link>
+                                  {p.isEliminated ? (
+                                    <Badge variant="destructive" className="text-[10px] px-1.5">
+                                      {ordinalLabel(p.eliminationOrder || 0)} Out
+                                    </Badge>
+                                  ) : risk.isNearElimination ? (
+                                    <Badge
+                                      variant="destructive"
+                                      className="text-[10px] px-1.5 animate-pulse"
+                                    >
+                                      Near Elimination
+                                    </Badge>
+                                  ) : null}
+                                </div>
+                                <div className="flex items-baseline gap-1 font-mono shrink-0">
+                                  <span
+                                    className={`text-base font-extrabold tabular-nums ${risk.scoreTextClass}`}
+                                  >
+                                    {p.totalScore}
+                                  </span>
+                                  <span className="text-xs text-muted-foreground">
+                                    /{ag.targetScore}
+                                  </span>
+                                </div>
+                              </div>
+                              <Progress
+                                value={risk.pct}
+                                indicatorClassName={risk.indicatorClass}
+                                className="h-2"
+                              />
+                              <div className="flex justify-between text-[11px] text-muted-foreground">
+                                <span>{risk.pct}% of target</span>
+                                <span>
+                                  {p.isEliminated
+                                    ? "Eliminated"
+                                    : `${risk.remaining} pts left`}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Main 2-Column Content */}
             <div className="grid gap-6 lg:grid-cols-3">

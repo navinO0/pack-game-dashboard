@@ -19,10 +19,14 @@ import {
   Loader2,
   Edit3,
   Trash2,
+  GripVertical,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { EditGameDialog } from "@/components/EditGameDialog";
 import { formatCurrency } from "@/lib/format";
+import { getScoreRiskStyle } from "@/lib/score-colors";
 import {
   evaluateRound,
   ordinalLabel,
@@ -163,6 +167,10 @@ export default function ActiveGamePage() {
 
   const [deletingRound, setDeletingRound] = useState<RoundDTO | null>(null);
   const [deletingRoundBusy, setDeletingRoundBusy] = useState(false);
+
+  // Drag & drop seat reordering
+  const [dragPlayerId, setDragPlayerId] = useState<string | null>(null);
+  const [reordering, setReordering] = useState(false);
 
   const scoreInputRefs = useRef<Array<HTMLInputElement | null>>([]);
   const editScoreInputRefs = useRef<Array<HTMLInputElement | null>>([]);
@@ -476,6 +484,38 @@ export default function ActiveGamePage() {
     }
   };
 
+  const handleReorderPlayers = async (fromId: string, toId: string) => {
+    if (!game || reordering || fromId === toId) return;
+    const current = [...game.players];
+    const fromIdx = current.findIndex((p) => p.id === fromId);
+    const toIdx = current.findIndex((p) => p.id === toId);
+    if (fromIdx === -1 || toIdx === -1) return;
+
+    const [moved] = current.splice(fromIdx, 1);
+    current.splice(toIdx, 0, moved);
+    const reordered = current.map((p, i) => ({ ...p, seatOrder: i + 1 }));
+
+    // Optimistic UI update
+    setGame({ ...game, players: reordered });
+    setReordering(true);
+    try {
+      const res = await fetch(`/api/games/${game.id}/players/order`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orderedGamePlayerIds: reordered.map((p) => p.id),
+        }),
+      });
+      if (!res.ok) {
+        await fetchGame();
+      }
+    } catch {
+      await fetchGame();
+    } finally {
+      setReordering(false);
+    }
+  };
+
   if (loading) {
     return (
       <AppShell>
@@ -659,86 +699,137 @@ export default function ActiveGamePage() {
           </Card>
         )}
 
-        {/* Top Live Scoreboard — Large Player Names & Scores */}
-        <div className="grid gap-2.5 sm:gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
-          {game.players.map((player) => {
-            const pct = Math.min(100, Math.round((player.totalScore / game.targetScore) * 100));
-            const remaining = Math.max(0, game.targetScore - player.totalScore);
-            const lowestActiveScore =
-              activePlayers.length > 0
-                ? Math.min(...activePlayers.map((p) => p.totalScore))
-                : null;
-            const isLeading =
-              !player.isEliminated &&
-              game.status === "ACTIVE" &&
-              game.currentRound > 0 &&
-              player.totalScore === lowestActiveScore;
+        {/* Top Live Scoreboard — Large Player Names & Color-Coded Scores (Drag to Set Positions) */}
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span className="font-medium">Live Scoreboard</span>
+            <span>Drag cards or use arrows to set player positions</span>
+          </div>
+          <div className="grid gap-2.5 sm:gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
+            {game.players.map((player, idx) => {
+              const risk = getScoreRiskStyle(
+                player.totalScore,
+                game.targetScore,
+                player.isEliminated,
+                player.isWinner
+              );
+              const lowestActiveScore =
+                activePlayers.length > 0
+                  ? Math.min(...activePlayers.map((p) => p.totalScore))
+                  : null;
+              const isLeading =
+                !player.isEliminated &&
+                !risk.isNearElimination &&
+                game.status === "ACTIVE" &&
+                game.currentRound > 0 &&
+                player.totalScore === lowestActiveScore;
 
-            return (
-              <Card
-                key={player.id}
-                className={
-                  player.isWinner
-                    ? "border-emerald-300 bg-emerald-50/70"
-                    : player.isEliminated
-                      ? "border-destructive/30 bg-destructive/5 opacity-75"
-                      : isLeading
-                        ? "border-primary/40 bg-card shadow-sm"
-                        : "bg-card"
-                }
-              >
-                <CardContent className="p-3 sm:p-5 space-y-2">
-                  <div className="flex items-start justify-between gap-1.5">
-                    <Link
-                      href={`/players/${player.playerId}`}
-                      className="text-sm sm:text-lg font-bold tracking-tight truncate hover:underline"
-                    >
-                      {player.name}
-                    </Link>
-                    {player.isWinner ? (
-                      <Badge className="shrink-0 bg-emerald-600 hover:bg-emerald-600 text-[10px] px-1.5">
-                        Winner
-                      </Badge>
-                    ) : player.isEliminated ? (
-                      <Badge variant="destructive" className="shrink-0 text-[10px] px-1.5">
-                        {ordinalLabel(player.eliminationOrder || 0)} Out
-                      </Badge>
-                    ) : isLeading ? (
-                      <Badge variant="secondary" className="shrink-0 text-[10px] px-1.5">
-                        Lead
-                      </Badge>
-                    ) : null}
-                  </div>
-
-                  <div className="flex items-baseline justify-between gap-1">
-                    <div className="flex items-baseline gap-1">
-                      <span
-                        className={`text-2xl sm:text-4xl font-extrabold font-mono tracking-tight tabular-nums ${
-                          player.isWinner
-                            ? "text-emerald-700"
-                            : player.isEliminated
-                              ? "text-destructive"
-                              : "text-foreground"
-                        }`}
-                      >
-                        {player.totalScore}
-                      </span>
-                      <span className="text-[11px] sm:text-sm font-mono text-muted-foreground">
-                        /{game.targetScore}
-                      </span>
+              return (
+                <Card
+                  key={player.id}
+                  draggable
+                  onDragStart={() => setDragPlayerId(player.id)}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={() => {
+                    if (dragPlayerId && dragPlayerId !== player.id) {
+                      handleReorderPlayers(dragPlayerId, player.id);
+                    }
+                    setDragPlayerId(null);
+                  }}
+                  onDragEnd={() => setDragPlayerId(null)}
+                  className={`cursor-grab active:cursor-grabbing transition-all ${risk.cardHighlightClass} ${
+                    dragPlayerId === player.id ? "opacity-50 scale-[0.98]" : ""
+                  }`}
+                >
+                  <CardContent className="p-3 sm:p-5 space-y-2">
+                    <div className="flex items-start justify-between gap-1.5">
+                      <div className="flex items-center gap-1 min-w-0">
+                        <GripVertical className="h-3.5 w-3.5 text-muted-foreground/60 shrink-0" />
+                        <Link
+                          href={`/players/${player.playerId}`}
+                          className="text-sm sm:text-lg font-bold tracking-tight truncate hover:underline"
+                        >
+                          {player.name}
+                        </Link>
+                      </div>
+                      {player.isWinner ? (
+                        <Badge className="shrink-0 bg-emerald-600 hover:bg-emerald-600 text-[10px] px-1.5">
+                          Winner
+                        </Badge>
+                      ) : player.isEliminated ? (
+                        <Badge variant="destructive" className="shrink-0 text-[10px] px-1.5">
+                          {ordinalLabel(player.eliminationOrder || 0)} Out
+                        </Badge>
+                      ) : risk.isNearElimination ? (
+                        <Badge
+                          variant="destructive"
+                          className="shrink-0 text-[10px] px-1.5 animate-pulse"
+                        >
+                          Near Out
+                        </Badge>
+                      ) : isLeading ? (
+                        <Badge variant="secondary" className="shrink-0 text-[10px] px-1.5">
+                          Lead
+                        </Badge>
+                      ) : null}
                     </div>
-                    {!player.isEliminated && (
-                      <span className="text-[11px] sm:text-xs text-muted-foreground font-medium tabular-nums">
-                        {remaining} left
-                      </span>
-                    )}
-                  </div>
 
-                  <Progress value={pct} className="h-1.5 sm:h-2" />
-                </CardContent>
-              </Card>
-            );
-          })}
+                    <div className="flex items-baseline justify-between gap-1">
+                      <div className="flex items-baseline gap-1">
+                        <span
+                          className={`text-2xl sm:text-4xl font-extrabold font-mono tracking-tight tabular-nums ${risk.scoreTextClass}`}
+                        >
+                          {player.totalScore}
+                        </span>
+                        <span className="text-[11px] sm:text-sm font-mono text-muted-foreground">
+                          /{game.targetScore}
+                        </span>
+                      </div>
+                      {!player.isEliminated && (
+                        <span
+                          className={`text-[11px] sm:text-xs font-medium tabular-nums ${
+                            risk.isNearElimination ? "text-red-600 font-semibold" : "text-muted-foreground"
+                          }`}
+                        >
+                          {risk.remaining} left
+                        </span>
+                      )}
+                    </div>
+
+                    <Progress
+                      value={risk.pct}
+                      indicatorClassName={risk.indicatorClass}
+                      className="h-2"
+                    />
+
+                    <div className="flex items-center justify-between pt-0.5 text-[10px] text-muted-foreground">
+                      <span>Seat #{idx + 1}</span>
+                      <div className="flex items-center gap-0.5">
+                        <button
+                          type="button"
+                          disabled={idx === 0 || reordering}
+                          onClick={() => handleReorderPlayers(player.id, game.players[idx - 1].id)}
+                          className="p-0.5 rounded hover:bg-accent disabled:opacity-30"
+                          aria-label={`Move ${player.name} earlier`}
+                        >
+                          <ArrowUp className="h-3 w-3" />
+                        </button>
+                        <button
+                          type="button"
+                          disabled={idx === game.players.length - 1 || reordering}
+                          onClick={() => handleReorderPlayers(player.id, game.players[idx + 1].id)}
+                          className="p-0.5 rounded hover:bg-accent disabled:opacity-30"
+                          aria-label={`Move ${player.name} later`}
+                        >
+                          <ArrowDown className="h-3 w-3" />
+                        </button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-3">
@@ -768,24 +859,35 @@ export default function ActiveGamePage() {
 
                 <CardContent className="pt-5 space-y-3">
                   {activePlayers.map((player) => {
-                    const pct = Math.min(
-                      100,
-                      Math.round((player.totalScore / game.targetScore) * 100)
+                    const risk = getScoreRiskStyle(
+                      player.totalScore,
+                      game.targetScore,
+                      player.isEliminated,
+                      player.isWinner
                     );
-                    const remaining = Math.max(0, game.targetScore - player.totalScore);
                     return (
                       <div
                         key={player.id}
-                        className="flex flex-col gap-3 rounded-lg border bg-card p-4 sm:flex-row sm:items-center sm:justify-between"
+                        className={`flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between ${risk.cardHighlightClass}`}
                       >
                         <div className="min-w-0 flex-1 space-y-1.5">
                           <div className="flex items-center justify-between sm:justify-start sm:gap-3">
                             <span className="text-sm font-semibold truncate">{player.name}</span>
-                            <span className="font-mono text-xs text-muted-foreground tabular-nums">
-                              {player.totalScore} / {game.targetScore} pts ({remaining} left)
+                            <span
+                              className={`font-mono text-xs tabular-nums ${
+                                risk.isNearElimination
+                                  ? "text-red-600 font-bold"
+                                  : "text-muted-foreground"
+                              }`}
+                            >
+                              {player.totalScore} / {game.targetScore} pts ({risk.remaining} left)
                             </span>
                           </div>
-                          <Progress value={pct} className="h-1.5 max-w-xs" />
+                          <Progress
+                            value={risk.pct}
+                            indicatorClassName={risk.indicatorClass}
+                            className="h-1.5 max-w-xs"
+                          />
                         </div>
 
                         <div className="grid grid-cols-6 gap-1.5 w-full sm:flex sm:w-auto sm:items-center shrink-0">
@@ -1059,32 +1161,57 @@ export default function ActiveGamePage() {
           <div className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Live Standings</CardTitle>
-                <CardDescription>Lowest score leads in Pack Game</CardDescription>
+                <CardTitle>Elimination Risk Order</CardTitle>
+                <CardDescription>Sorted by who is closest to elimination first</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 {[...activePlayers]
-                  .sort((a, b) => a.totalScore - b.totalScore)
+                  .sort((a, b) => b.totalScore - a.totalScore)
                   .map((p) => {
-                    const remaining = Math.max(0, game.targetScore - p.totalScore);
-                    const pct = Math.min(100, Math.round((p.totalScore / game.targetScore) * 100));
+                    const risk = getScoreRiskStyle(
+                      p.totalScore,
+                      game.targetScore,
+                      p.isEliminated,
+                      p.isWinner
+                    );
                     return (
-                      <div key={p.id} className="rounded-lg border bg-muted/20 p-3 space-y-2">
+                      <div
+                        key={p.id}
+                        className={`rounded-lg border p-3 space-y-2 ${risk.cardHighlightClass}`}
+                      >
                         <div className="flex items-center justify-between gap-2">
-                          <Link
-                            href={`/players/${p.playerId}`}
-                            className="text-sm font-medium hover:underline truncate"
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <Link
+                              href={`/players/${p.playerId}`}
+                              className="text-sm font-medium hover:underline truncate"
+                            >
+                              {p.name}
+                            </Link>
+                            {risk.isNearElimination && (
+                              <Badge
+                                variant="destructive"
+                                className="text-[10px] px-1.5 animate-pulse"
+                              >
+                                Near Out
+                              </Badge>
+                            )}
+                          </div>
+                          <span
+                            className={`font-mono text-sm font-bold tabular-nums ${risk.scoreTextClass}`}
                           >
-                            {p.name}
-                          </Link>
-                          <span className="font-mono text-sm font-bold tabular-nums">
                             {p.totalScore} pts
                           </span>
                         </div>
-                        <Progress value={pct} className="h-1.5" />
+                        <Progress
+                          value={risk.pct}
+                          indicatorClassName={risk.indicatorClass}
+                          className="h-2"
+                        />
                         <div className="flex justify-between text-[11px] text-muted-foreground">
-                          <span>{pct}% of target</span>
-                          <span>{remaining} pts left</span>
+                          <span>{risk.pct}% of target</span>
+                          <span className={risk.isNearElimination ? "text-red-600 font-semibold" : ""}>
+                            {risk.remaining} pts left
+                          </span>
                         </div>
                       </div>
                     );

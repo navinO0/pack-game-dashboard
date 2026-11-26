@@ -12,6 +12,9 @@ import {
   Sparkles,
   Play,
   Loader2,
+  GripVertical,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import {
@@ -76,6 +79,7 @@ function CreateGameForm() {
   );
 
   const [selectedPlayers, setSelectedPlayers] = useState<SelectedPlayer[]>([]);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [playerInput, setPlayerInput] = useState("");
   const [distribution, setDistribution] = useState<DistributionSlot[]>([]);
 
@@ -168,6 +172,16 @@ function CreateGameForm() {
 
   const removePlayer = (index: number) => {
     setSelectedPlayers((prev) => prev.filter((_, idx) => idx !== index));
+  };
+
+  const movePlayer = (fromIndex: number, toIndex: number) => {
+    if (toIndex < 0 || toIndex >= selectedPlayers.length || fromIndex === toIndex) return;
+    setSelectedPlayers((prev) => {
+      const next = [...prev];
+      const [moved] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, moved);
+      return next;
+    });
   };
 
   const updateSlotPercentage = (index: number, rawValue: string) => {
@@ -410,15 +424,28 @@ function CreateGameForm() {
               {selectedPlayers.length > 0 && (
                 <div className="space-y-2">
                   <p className="text-xs font-medium text-muted-foreground">
-                    Selected Table Order
+                    Selected Table Order (Drag &amp; drop or use arrows to set positions)
                   </p>
                   <div className="grid gap-2.5 sm:grid-cols-2">
                     {selectedPlayers.map((p, idx) => (
                       <div
                         key={`${p.name}-${idx}`}
-                        className="flex items-center justify-between gap-2 rounded-lg border bg-muted/30 px-3 py-2"
+                        draggable
+                        onDragStart={() => setDragIndex(idx)}
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={() => {
+                          if (dragIndex !== null && dragIndex !== idx) {
+                            movePlayer(dragIndex, idx);
+                          }
+                          setDragIndex(null);
+                        }}
+                        onDragEnd={() => setDragIndex(null)}
+                        className={`flex items-center justify-between gap-2 rounded-lg border bg-muted/30 px-3 py-2 cursor-grab active:cursor-grabbing transition-all ${
+                          dragIndex === idx ? "opacity-50 ring-2 ring-primary" : "hover:border-primary/40"
+                        }`}
                       >
-                        <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <GripVertical className="h-4 w-4 text-muted-foreground shrink-0" />
                           <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-semibold">
                             {idx + 1}
                           </span>
@@ -429,16 +456,40 @@ function CreateGameForm() {
                             </Badge>
                           )}
                         </div>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                          onClick={() => removePlayer(idx)}
-                          aria-label={`Remove ${p.name}`}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center gap-0.5 shrink-0">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-muted-foreground"
+                            disabled={idx === 0}
+                            onClick={() => movePlayer(idx, idx - 1)}
+                            aria-label={`Move ${p.name} up`}
+                          >
+                            <ArrowUp className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-muted-foreground"
+                            disabled={idx === selectedPlayers.length - 1}
+                            onClick={() => movePlayer(idx, idx + 1)}
+                            aria-label={`Move ${p.name} down`}
+                          >
+                            <ArrowDown className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                            onClick={() => removePlayer(idx)}
+                            aria-label={`Remove ${p.name}`}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
                       </div>
                     ))}
                   </div>

@@ -108,6 +108,33 @@ test("Scenario B tie: Equal score causes announcer to lose and receive sum of al
   assert.equal(res.newlyEliminated[0].cumulativeScore, 41);
 });
 
+test("Announce 0 special rule: Announcer with 0 ALWAYS wins even if another player also has 0; others keep their own scores", () => {
+  const players = makePlayers();
+  const res = evaluateRound(
+    players,
+    [
+      { gamePlayerId: "gpA", announcedScore: 0 },
+      { gamePlayerId: "gpB", announcedScore: 0 },
+      { gamePlayerId: "gpC", announcedScore: 15 },
+      { gamePlayerId: "gpD", announcedScore: 8 },
+    ],
+    "gpA",
+    100,
+    1
+  );
+
+  assert.equal(res.outcome, "ANNOUNCER_WON");
+  assert.deepEqual(res.winnerGamePlayerIds, ["gpA"]);
+
+  const recById = new Map(res.roundScoreRecords.map((r) => [r.gamePlayerId, r]));
+  assert.equal(recById.get("gpA")?.points, 0);
+  assert.equal(recById.get("gpA")?.isRoundWinner, true);
+  assert.equal(recById.get("gpB")?.points, 0);
+  assert.equal(recById.get("gpB")?.isRoundWinner, false);
+  assert.equal(recById.get("gpC")?.points, 15);
+  assert.equal(recById.get("gpD")?.points, 8);
+});
+
 test("Rejects announcer score > 5 while allowing other players to have scores > 5", () => {
   const players = makePlayers();
   assert.throws(() =>

@@ -234,12 +234,16 @@ export function evaluateRound(
     0
   );
 
-  // Other active players whose score is equal to or lower than the announcer's score
-  const challengers = activePlayers.filter(
-    (p) =>
-      p.gamePlayerId !== evaluatedGamePlayerId &&
-      announcedMap.get(p.gamePlayerId)! <= evaluatedAnnounced
-  );
+  // Special Rule: If the announcer announces 0, they ALWAYS win the round even if another player also has 0.
+  // Otherwise, any other active player with score <= announcer's score challenges and defeats the announcer.
+  const challengers =
+    evaluatedAnnounced === 0
+      ? []
+      : activePlayers.filter(
+          (p) =>
+            p.gamePlayerId !== evaluatedGamePlayerId &&
+            announcedMap.get(p.gamePlayerId)! <= evaluatedAnnounced
+        );
 
   const outcome: RoundOutcome = challengers.length === 0 ? "ANNOUNCER_WON" : "ANNOUNCER_LOST";
 

@@ -89,3 +89,4 @@ runPrisma(["db", "execute", "--stdin", "--schema", prismaSchema], "SELECT 1;\n")
 console.log(
   `[DB Prepare] ✔ Database connection verified and migrations up to date (${isPostgres ? `PostgreSQL:${schemaName}` : "SQLite"}).`
 );
+
