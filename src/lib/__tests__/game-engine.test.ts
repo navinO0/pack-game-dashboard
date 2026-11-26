@@ -182,6 +182,29 @@ test("Position tie-break: When announcer announces 1 and two others also have 1,
   assert.equal(r2Map.get("gpC")?.points, 11);
 });
 
+test("Next-in-order challenger wins: A(1) announces 4, B(2)=3 and C(3)=1 -> B(2) is next after A with <=4 so B wins (0), only A gets penalty (28), C keeps 1, D keeps 20", () => {
+  const players = makePlayers();
+  const res = evaluateRound(
+    players,
+    [
+      { gamePlayerId: "gpA", announcedScore: 4 },
+      { gamePlayerId: "gpB", announcedScore: 3 },
+      { gamePlayerId: "gpC", announcedScore: 1 },
+      { gamePlayerId: "gpD", announcedScore: 20 },
+    ],
+    "gpA",
+    100,
+    1
+  );
+  assert.equal(res.outcome, "ANNOUNCER_LOST");
+  assert.deepEqual(res.winnerGamePlayerIds, ["gpB"]);
+  const map = new Map(res.roundScoreRecords.map((r) => [r.gamePlayerId, r]));
+  assert.equal(map.get("gpA")?.points, 28); // Only announcer gets penalty (4+3+1+20)
+  assert.equal(map.get("gpB")?.points, 0);  // Next player with <= 4 wins (0 pts)
+  assert.equal(map.get("gpC")?.points, 1);  // Keeps own score
+  assert.equal(map.get("gpD")?.points, 20); // Keeps own score
+});
+
 test("Rejects announcer score > 5 while allowing other players to have scores > 5", () => {
   const players = makePlayers();
   assert.throws(() =>

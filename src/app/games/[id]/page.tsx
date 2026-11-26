@@ -1336,7 +1336,7 @@ export default function ActiveGamePage() {
                           {previewRec?.isRoundWinner && (
                             <Badge className="bg-emerald-600 hover:bg-emerald-600 text-[10px]">
                               <Award className="mr-1 h-3 w-3" />
-                              Lowest Winner (0 pts)
+                              Round Winner (0 pts)
                             </Badge>
                           )}
                           {previewRec?.triggeredElimination && (
